@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classroom Seat Planner</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        h1, h2 {
+            color: #2c3e50;
+        }
+        
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .input-section, .constraints-section, .classroom-section, .feedback-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        textarea, input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        button {
+            background-color: #9ACD32;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #7CB342;
+        }
+        
+        .seat {
+            width: 80px;
+            height: 80px;
+            border: 1px solid #ddd;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 5px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .seat.girl {
+            background-color: #ffd6e0;
+        }
+        
+        .seat.boy {
+            background-color: #d6e4ff;
+        }
+        
+        .seat:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .classroom-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        .student-list {
+            margin-top: 10px;
+        }
+        
+        .student-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            padding: 8px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        
+        .gender-toggle {
+            margin-left: 10px;
+            padding: 5px 10px;
+            font-size: 12px;
+            border: 1px solid #ddd;
+            background-color: #f5f5f5;
+            color: #333;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .gender-toggle.selected {
+            color: white;
+        }
+        
+        .gender-toggle.boy {
+            background-color: #f5f5f5;
+        }
+        
+        .gender-toggle.boy.selected {
+            background-color: #4a89dc;
+            border-color: #3a70c2;
+        }
+        
+        .gender-toggle.girl {
+            background-color: #f5f5f5;
+        }
+        
+        .gender-toggle.girl.selected {
+            background-color: #ed5565;
+            border-color: #da4453;
+        }
+        
+        .constraint-pair {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .constraint-pair select {
+            flex: 1;
+            padding: 8px;
+        }
+        
+        .feedback-section {
+            margin-top: 20px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+    <!-- Add html2canvas and pdfmake libraries -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/vfs_fonts.js"></script>
+</head>
+<body>
+    <h1>Classroom Seat Planner of Group-9</h1>
+    <p>A fair and randomized seating arrangement tool for teachers</p>
+    
+    <div class="container">
+        <div class="input-section">
+            <h2>Student List</h2>
+            <textarea id="studentNames" rows="5" placeholder="Enter student names, one per line"></textarea>
+            <button id="loadDemo">Load Demo Class</button>
+            <div id="studentList" class="student-list"></div>
+        </div>
+        
+        <div class="constraints-section">
+            <h2>Seating Constraints</h2>
+            <div id="constraintsContainer">
+                <div class="constraint-pair">
+                    <select class="student-select"></select>
+                    <select class="student-select"></select>
+                    <button class="remove-constraint">×</button>
+                </div>
+            </div>
+            <button id="addConstraint">Add Constraint</button>
+        </div>
+    </div>
+    
+    <div class="classroom-section">
+        <h2>Classroom Layout</h2>
+        <div>
+            <label for="deskCount">Number of Desks:</label>
+            <input type="number" id="deskCount" min="1" value="30">
+        </div>
+        <div class="controls">
+            <button id="generateSeats">Generate Random Seating</button>
+            <button id="saveLayout">Save Layout</button>
+            <button id="loadLayout">Load Layout</button>
+            <button id="exportPNG">Export as PNG</button>
+            <button id="exportPDF">Export as PDF</button>
+        </div>
+        <div id="classroom" class="classroom-layout"></div>
+    </div>
+    
+    <div id="feedbackSection" class="feedback-section hidden">
+        <h2>Teacher Feedback</h2>
+        <p>How effective was this seating arrangement?</p>
+        <select id="effectivenessRating">
+            <option value="5">Very Effective</option>
+            <option value="4">Effective</option>
+            <option value="3">Neutral</option>
+            <option value="2">Ineffective</option>
+            <option value="1">Very Ineffective</option>
+        </select>
+        <textarea id="feedbackComments" placeholder="Additional comments..." rows="4"></textarea>
+        <button id="submitFeedback">Submit Feedback</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const studentNames = document.getElementById('studentNames');
+            const deskCount = document.getElementById('deskCount');
+            const classroom = document.getElementById('classroom');
+            const studentList = document.getElementById('studentList');
+            const constraintsContainer = document.getElementById('constraintsContainer');
+            const feedbackSection = document.getElementById('feedbackSection');
+            
+            // Data storage
+            let students = [];
+            let constraints = [];
+            
+            // Initialize
+            updateStudentSelects();
+            
+            // Event listeners
+            studentNames.addEventListener('input', updateStudentList);
+            document.getElementById('loadDemo').addEventListener('click', loadDemoClass);
+            document.getElementById('generateSeats').addEventListener('click', generateRandomSeating);
+            document.getElementById('addConstraint').addEventListener('click', addConstraint);
+            document.getElementById('saveLayout').addEventListener('click', saveLayout);
+            document.getElementById('loadLayout').addEventListener('click', loadLayout);
+            document.getElementById('submitFeedback').addEventListener('click', submitFeedback);
+            document.getElementById('exportPNG').addEventListener('click', exportAsPNG);
+            document.getElementById('exportPDF').addEventListener('click', exportAsPDF);
+            
+            // Functions
+            function updateStudentList() {
+                studentList.innerHTML = '';
+                const names = studentNames.value.split('\n').filter(name => name.trim());
+                
+                // Only update students array if names have changed
+                if (names.length !== students.length || 
+                    names.some((name, i) => !students[i] || name !== students[i].name)) {
+                    students = names.map(name => ({
+                        name: name.trim(),
+                        gender: 'unknown'
+                    }));
+                }
+                
+                students.forEach((student, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'student-item';
+                    div.innerHTML = `
+                        <span>${student.name}</span>
+                        <button class="gender-toggle boy" data-index="${index}" data-gender="boy">Boy</button>
+                        <button class="gender-toggle girl" data-index="${index}" data-gender="girl">Girl</button>
+                    `;
+                    studentList.appendChild(div);
+                    
+                    // Set initial button states
+                    const boyBtn = div.querySelector('.boy');
+                    const girlBtn = div.querySelector('.girl');
+                    
+                    boyBtn.classList.toggle('selected', student.gender === 'boy');
+                    girlBtn.classList.toggle('selected', student.gender === 'girl');
+                });
+                
+                // Add gender toggle events
+                document.querySelectorAll('.gender-toggle').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const index = parseInt(this.dataset.index);
+                        const gender = this.dataset.gender;
+                        
+                        // Update student gender
+                        students[index].gender = gender;
+                        
+                        // Update button states
+                        const parentDiv = this.parentNode;
+                        parentDiv.querySelector('.boy').classList.remove('selected');
+                        parentDiv.querySelector('.girl').classList.remove('selected');
+                        this.classList.add('selected');
+                    });
+                });
+                
+                updateStudentSelects();
+            }
+            
+            function updateStudentSelects() {
+                const selects = document.querySelectorAll('.student-select');
+                selects.forEach(select => {
+                    const currentValue = select.value;
+                    select.innerHTML = '<option value="">Select student</option>';
+                    
+                    students.forEach(student => {
+                        const option = document.createElement('option');
+                        option.value = student.name;
+                        option.textContent = student.name;
+                        select.appendChild(option);
+                    });
+                    
+                    if (students.some(s => s.name === currentValue)) {
+                        select.value = currentValue;
+                    }
+                });
+            }
+            
+            function loadDemoClass() {
+                const demoStudents = [
+                    "Emma Johnson", "Liam Smith", "Olivia Williams", "Noah Brown", "Ava Jones",
+                    "William Garcia", "Sophia Miller", "Benjamin Davis", "Isabella Rodriguez"
+                ];
+                studentNames.value = demoStudents.join('\n');
+                updateStudentList();
+            }
+            
+            function generateRandomSeating() {
+                updateConstraints();
+                
+                if (students.length === 0) {
+                    alert('Please enter student names first');
+                    return;
+                }
+                
+                // Create shuffled copy
+                let shuffledStudents = [...students];
+                for (let i = shuffledStudents.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [shuffledStudents[i], shuffledStudents[j]] = [shuffledStudents[j], shuffledStudents[i]];
+                }
+                
+                // Apply constraints
+                let attempts = 0;
+                const maxAttempts = 100;
+                let constraintsViolated = true;
+                
+                while (constraintsViolated && attempts < maxAttempts) {
+                    constraintsViolated = false;
+                    
+                    for (const [student1, student2] of constraints) {
+                        const index1 = shuffledStudents.findIndex(s => s.name === student1);
+                        const index2 = shuffledStudents.findIndex(s => s.name === student2);
+                        
+                        if (Math.abs(index1 - index2) <= 1) {
+                            constraintsViolated = true;
+                            const swapIndex = Math.floor(Math.random() * shuffledStudents.length);
+                            [shuffledStudents[index1], shuffledStudents[swapIndex]] = 
+                                [shuffledStudents[swapIndex], shuffledStudents[index1]];
+                            break;
+                        }
+                    }
+                    
+                    attempts++;
+                }
+                
+                if (constraintsViolated) {
+                    alert('Warning: Could not satisfy all constraints after multiple attempts');
+                }
+                
+                // Render seats
+                renderSeats(shuffledStudents);
+                
+                // Show feedback section
+                feedbackSection.classList.remove('hidden');
+            }
+            
+            function renderSeats(studentArrangement) {
+                classroom.innerHTML = '';
+                const count = parseInt(deskCount.value) || 30;
+                
+                for (let i = 0; i < count; i++) {
+                    const seat = document.createElement('div');
+                    seat.className = 'seat';
+                    
+                    if (studentArrangement[i]) {
+                        seat.textContent = studentArrangement[i].name;
+                        if (studentArrangement[i].gender !== 'unknown') {
+                            seat.classList.add(studentArrangement[i].gender);
+                        }
+                    } else {
+                        seat.textContent = 'Empty';
+                        seat.style.backgroundColor = '#eee';
+                    }
+                    
+                    classroom.appendChild(seat);
+                }
+                
+                // Show feedback section
+                feedbackSection.classList.remove('hidden');
+            }
+            
+            function addConstraint() {
+                const pair = document.createElement('div');
+                pair.className = 'constraint-pair';
+                
+                const select1 = document.createElement('select');
+                select1.className = 'student-select';
+                
+                const select2 = document.createElement('select');
+                select2.className = 'student-select';
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-constraint';
+                removeBtn.textContent = '×';
+                removeBtn.addEventListener('click', function() {
+                    constraintsContainer.removeChild(pair);
+                    updateConstraints();
+                });
+                
+                pair.appendChild(select1);
+                pair.appendChild(select2);
+                pair.appendChild(removeBtn);
+                constraintsContainer.appendChild(pair);
+                
+                updateStudentSelects();
+            }
+            
+            function updateConstraints() {
+                constraints = [];
+                const pairs = document.querySelectorAll('.constraint-pair');
+                
+                pairs.forEach(pair => {
+                    const selects = pair.querySelectorAll('select');
+                    const student1 = selects[0].value;
+                    const student2 = selects[1].value;
+                    
+                    if (student1 && student2 && student1 !== student2) {
+                        constraints.push([student1, student2]);
+                    }
+                });
+            }
+            
+            function saveLayout() {
+                const layout = {
+                    students: students,
+                    constraints: constraints,
+                    deskCount: deskCount.value,
+                    html: classroom.innerHTML
+                };
+                localStorage.setItem('classroomLayout', JSON.stringify(layout));
+                alert('Layout saved!');
+            }
+            
+            function loadLayout() {
+                const saved = localStorage.getItem('classroomLayout');
+                if (saved) {
+                    const layout = JSON.parse(saved);
+                    students = layout.students;
+                    constraints = layout.constraints || [];
+                    deskCount.value = layout.deskCount;
+                    studentNames.value = students.map(s => s.name).join('\n');
+                    classroom.innerHTML = layout.html;
+                    updateStudentList();
+                    alert('Layout loaded!');
+                } else {
+                    alert('No saved layout found');
+                }
+            }
+            
+            function submitFeedback() {
+                const rating = document.getElementById('effectivenessRating').value;
+                const comments = document.getElementById('feedbackComments').value;
+                
+                console.log('Feedback submitted:', { rating, comments });
+                alert('Thank you for your feedback!');
+                feedbackSection.classList.add('hidden');
+                
+                // Reset feedback form
+                document.getElementById('effectivenessRating').value = '5';
+                document.getElementById('feedbackComments').value = '';
+            }
+            
+            function exportAsPNG() {
+                if (classroom.children.length === 0) {
+                    alert('Please generate a seating arrangement first');
+                    return;
+                }
+                
+                html2canvas(classroom).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = 'classroom-seating.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                });
+            }
+            
+            function exportAsPDF() {
+                if (classroom.children.length === 0) {
+                    alert('Please generate a seating arrangement first');
+                    return;
+                }
+                
+                html2canvas(classroom).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const docDefinition = {
+                        content: [
+                            { text: 'Classroom Seating Plan', style: 'header' },
+                            { image: imgData, width: 500 }
+                        ],
+                        styles: {
+                            header: {
+                                fontSize: 18,
+                                bold: true,
+                                margin: [0, 0, 0, 10]
+                            }
+                        }
+                    };
+                    
+                    pdfMake.createPdf(docDefinition).download('classroom-seating.pdf');
+                });
+            }
+        });
+    </script>
+</body>
+</html>
